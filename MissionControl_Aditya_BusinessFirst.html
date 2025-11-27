@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol Omega: Incubator to Arena</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown parsing in chat -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Chosen Palette: Warm Industrial (Stone, Amber, Slate) -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4; /* Stone-100 */
+            color: #1c1917; /* Stone-900 */
+        }
+        h1, h2, h3, .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e7e5e4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a8a29e; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #78716c; 
+        }
+        
+        .active-tab {
+            background-color: #1c1917; /* Stone-900 */
+            color: #ffffff;
+            border-bottom: 4px solid #d97706; /* Amber-600 */
+        }
+        .inactive-tab {
+            background-color: #e7e5e4; /* Stone-200 */
+            color: #57534e; /* Stone-600 */
+        }
+        .inactive-tab:hover {
+            background-color: #d6d3d1; /* Stone-300 */
+        }
+
+        /* Nav Deck Styles */
+        .nav-deck-btn {
+            @apply px-4 py-2 rounded-md font-bold text-sm transition-all duration-200 whitespace-nowrap flex items-center gap-2;
+        }
+        .nav-deck-active {
+            background-color: #d97706; /* Amber-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4);
+        }
+        .nav-deck-inactive {
+            background-color: white;
+            color: #57534e;
+            border: 1px solid #e7e5e4;
+        }
+        .nav-deck-inactive:hover {
+            background-color: #f5f5f4;
+            color: #1c1917;
+        }
+
+        /* Protocol Cards */
+        .protocol-card {
+            @apply border border-stone-200 rounded-lg p-4 bg-white relative overflow-hidden transition-all hover:shadow-md;
+        }
+        .protocol-time {
+            @apply font-mono text-amber-600 font-bold text-sm;
+        }
+
+        /* AI Terminal Styling */
+        .terminal-window {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #1c1917;
+            color: #10b981; /* Emerald-500 */
+            border: 1px solid #44403c;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+        .terminal-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* Markdown Styles in Chat */
+        .prose-invert p { margin-bottom: 0.5em; }
+        .prose-invert ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.5em; }
+        .prose-invert code { background: #292524; padding: 0.1em 0.3em; rounded: 0.2em; font-size: 0.9em; }
+        .prose-invert strong { color: #fbbf24; } /* Amber-400 */
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar / Status Bar -->
+    <header class="bg-stone-900 text-stone-50 p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🚀</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tighter text-amber-500">PROTOCOL: OMEGA v3</h1>
+                    <p class="text-xs text-stone-400 mono">OWNER: ADITYA | PHASE: INCUBATOR</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6 text-sm mono">
+                <div class="text-center">
+                    <p class="text-stone-500 text-xs">TARGET DATE</p>
+                    <p class="font-bold text-amber-500">DEC 01 2026</p>
+                </div>
+                <div class="bg-stone-800 px-4 py-2 rounded border border-stone-700">
+                    <span id="countdown-timer" class="font-bold text-lg text-white">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 md:p-8 space-y-8">
+
+        <!-- Main Navigation Deck -->
+        <nav class="flex flex-wrap justify-center md:justify-start gap-3 pb-4 border-b border-stone-200 overflow-x-auto">
+            <button onclick="switchMainView('dashboard')" id="nav-dashboard" class="nav-deck-btn nav-deck-active">
+                📊 Mission Control
+            </button>
+            <button onclick="switchMainView('daily')" id="nav-daily" class="nav-deck-btn nav-deck-inactive">
+                ⏰ Daily Ops
+            </button>
+            <button onclick="switchMainView('projects')" id="nav-projects" class="nav-deck-btn nav-deck-inactive">
+                🏗️ Project Lab
+            </button>
+            <button onclick="switchMainView('courses')" id="nav-courses" class="nav-deck-btn nav-deck-inactive">
+                📚 Course Intel
+            </button>
+            <button onclick="switchMainView('team')" id="nav-team" class="nav-deck-btn nav-deck-inactive">
+                👥 Squadron
+            </button>
+            <button onclick="switchMainView('identity')" id="nav-identity" class="nav-deck-btn nav-deck-inactive">
+                🆔 Digital Identity
+            </button>
+        </nav>
+
+        <!-- VIEW 1: DASHBOARD (Summary) -->
+        <div id="view-dashboard" class="space-y-12">
+            <!-- INTRO & MISSION CONTEXT -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">Mission Briefing</h2>
+                    <p class="text-stone-600 leading-relaxed mb-4">
+                        The plan has evolved. <strong>Phase 1 (Months 1-6)</strong> is purely for Skill Acquisition, Team Assembly, and Business Launch. We do not compete; we build. <strong>Phase 2 (Months 7-12)</strong> is the Arena, where we enter Hackathons with a mature product and a battle-hardened team.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                        <div class="bg-amber-50 p-4 rounded border-l-4 border-amber-500">
+                            <h3 class="font-bold text-amber-800">Phase 1: The Incubator</h3>
+                            <p class="text-sm text-stone-700">Build Team. Learn Stack. Launch Business.</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded border-l-4 border-blue-500">
+                            <h3 class="font-bold text-blue-800">Phase 2: The Arena</h3>
+                            <p class="text-sm text-stone-700">Start Hackathons. Scale Business. Win SIH.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-stone-800 text-stone-100 p-6 rounded-xl shadow-sm flex flex-col justify-center items-center text-center">
+                    <div class="text-4xl mb-2">🛡️</div>
+                    <h2 class="text-xl font-bold mb-2">Monk Mode</h2>
+                    <p class="text-sm text-stone-400 mb-4">Learn. Build. Then Conquer.</p>
+                    <div class="w-full bg-stone-700 h-2 rounded-full overflow-hidden">
+                        <div class="bg-amber-500 h-full w-[0%]" id="year-progress"></div>
+                    </div>
+                    <p class="text-xs mt-2 mono text-stone-500">YEAR PROGRESS</p>
+                </div>
+            </section>
+
+            <!-- VISUALIZATION SECTION -->
+            <section>
+                <div class="flex flex-col md:flex-row justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-stone-800">Strategic Operations</h2>
+                        <p class="text-stone-500">Visualizing the skill evolution and daily execution protocols.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Chart 1: The Evolution (Radar) -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-stone-700 flex items-center gap-2">
+                                <span class="text-amber-600">📊</span> Skill Focus Evolution
+                            </h3>
+                            <button onclick="analyzeRadar()" class="flex items-center gap-1 bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded text-xs font-bold transition-colors border border-stone-300">
+                                ⚡ ANALYZE GAPS
+                            </button>
+                        </div>
+                        <div class="flex-grow flex items-center justify-center bg-stone-50 rounded-lg p-2">
+                            <div class="chart-container">
+                                <canvas id="evolutionChart"></canvas>
+                            </div>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-4 text-center italic">Interact with the legend to compare quarters.</p>
+                    </div>
+
+                    <!-- Chart 2: The Routine (Floating Bar) -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-stone-700 flex items-center gap-2">
+                                <span class="text-amber-600">⏰</span> Daily Protocol
+                            </h3>
+                            <button onclick="optimizeRoutine()" class="flex items-center gap-1 bg-stone-100 hover:bg-stone-200 text-stone-600 px-2 py-1 rounded text-xs font-bold transition-colors border border-stone-300">
+                                🧠 OPTIMIZE ROUTINE
+                            </button>
+                        </div>
+                        <div class="flex-grow flex items-center justify-center bg-stone-50 rounded-lg p-2">
+                            <div class="chart-container">
+                                <canvas id="routineChart"></canvas>
+                            </div>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-4 text-center italic">Hover over blocks for activity details.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUARTERLY ROADMAP INTERFACE -->
+            <section id="roadmap">
+                <h2 class="text-2xl font-bold text-stone-800 mb-6">Tactical Roadmap</h2>
+                
+                <!-- Quarter Tabs -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
+                    <button onclick="switchQuarter(1)" id="tab-q1" class="active-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base">
+                        Q1: FOUNDATION
+                        <span class="block text-xs font-normal opacity-70 mt-1">Dec - Feb</span>
+                    </button>
+                    <button onclick="switchQuarter(2)" id="tab-q2" class="inactive-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base">
+                        Q2: BUSINESS MVP
+                        <span class="block text-xs font-normal opacity-70 mt-1">Mar - May</span>
+                    </button>
+                    <button onclick="switchQuarter(3)" id="tab-q3" class="inactive-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base">
+                        Q3: ENTER ARENA
+                        <span class="block text-xs font-normal opacity-70 mt-1">Jun - Aug</span>
+                    </button>
+                    <button onclick="switchQuarter(4)" id="tab-q4" class="inactive-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base">
+                        Q4: DOMINATION
+                        <span class="block text-xs font-normal opacity-70 mt-1">Sep - Nov</span>
+                    </button>
+                </div>
+
+                <!-- Quarter Content Area -->
+                <div class="bg-white p-6 md:p-8 rounded-b-xl rounded-tr-xl shadow-sm border border-stone-200 -mt-2 min-h-[400px]">
+                    
+                    <!-- Dynamic Header -->
+                    <div class="flex flex-col md:flex-row justify-between items-start border-b border-stone-100 pb-6 mb-6 gap-4">
+                        <div>
+                            <h3 id="q-title" class="text-3xl font-bold text-stone-800 mb-2">Q1: Foundation & Team Assembly</h3>
+                            <p id="q-theme" class="text-amber-600 font-mono text-sm font-bold uppercase tracking-wider">Theme: "The Setup"</p>
+                        </div>
+                        <div class="flex gap-2 items-center flex-wrap">
+                            <div id="q-badges" class="flex gap-2">
+                                <!-- Badges injected via JS -->
+                            </div>
+                            <button onclick="requestIntel()" class="flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded text-xs font-bold transition-colors border border-amber-300 ml-2">
+                                <span>✨</span> REQUEST INTEL
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Three Column Layout for Content -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        <!-- Left: Objectives -->
+                        <div class="lg:col-span-1 space-y-6">
+                            <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
+                                <h4 class="font-bold text-stone-700 mb-4 border-b border-stone-200 pb-2">🎯 Key Objectives</h4>
+                                <ul id="q-objectives" class="space-y-3 text-sm text-stone-600">
+                                    <!-- List Items injected via JS -->
+                                </ul>
+                            </div>
+
+                            <div class="bg-stone-900 text-stone-50 p-5 rounded-lg border border-stone-800">
+                                <h4 class="font-bold text-amber-500 mb-2 border-b border-stone-700 pb-2">💼 Business POV</h4>
+                                <p id="q-business" class="text-sm leading-relaxed text-stone-300">
+                                    <!-- Business text injected via JS -->
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Right: Monthly Timeline -->
+                        <div class="lg:col-span-2">
+                            <h4 class="font-bold text-stone-700 mb-4 pb-2">🗓️ Execution Timeline</h4>
+                            <div id="q-timeline" class="space-y-4">
+                                <!-- Monthly Cards injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- VIEW 2: DAILY OPS (Protocols) -->
+        <div id="view-daily" class="hidden space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">⏰ Operational Protocols</h2>
+                <p class="text-stone-500">Strict time-management systems for Weekdays, Weekends, and Holidays.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Column 1: Weekday -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="bg-stone-100 p-4 border-b border-stone-200">
+                        <h3 class="font-bold text-stone-800">📅 Weekday (Standard)</h3>
+                        <p class="text-xs text-stone-500">Monday - Friday (College Buffer)</p>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="protocol-card border-l-4 border-amber-500">
+                            <div class="protocol-time">05:30 - 07:30</div>
+                            <div class="font-bold text-stone-800">Deep Work 1 (Hard Core)</div>
+                            <div class="text-xs text-stone-500">Theory, Algorithms, New Concepts. No WiFi.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-emerald-500">
+                            <div class="protocol-time">07:30 - 08:30</div>
+                            <div class="font-bold text-stone-800">Physical Activation</div>
+                            <div class="text-xs text-stone-500">Gym/Run/Swim. Reset Brain.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-stone-400">
+                            <div class="protocol-time">09:00 - 17:00</div>
+                            <div class="font-bold text-stone-800">College / Academic Buffer</div>
+                            <div class="text-xs text-stone-500">Use breaks for documentation/light reading.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-amber-500">
+                            <div class="protocol-time">19:00 - 21:00</div>
+                            <div class="font-bold text-stone-800">Deep Work 2 (Build Phase)</div>
+                            <div class="text-xs text-stone-500">Coding Projects (Shaurya/Cogniverse).</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-purple-500">
+                            <div class="protocol-time">21:30 - 22:30</div>
+                            <div class="font-bold text-stone-800">Business / Identity</div>
+                            <div class="text-xs text-stone-500">Update LinkedIn, Pitch Decks, Research.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Weekend -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="bg-stone-100 p-4 border-b border-stone-200">
+                        <h3 class="font-bold text-stone-800">🏖️ Weekend (Deep Dive)</h3>
+                        <p class="text-xs text-stone-500">Saturday - Sunday (Build Focus)</p>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="protocol-card border-l-4 border-blue-500">
+                            <div class="protocol-time">08:00 - 12:00</div>
+                            <div class="font-bold text-stone-800">Marathon Coding Block</div>
+                            <div class="text-xs text-stone-500">4 Hours uninterrupted build time.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-stone-400">
+                            <div class="protocol-time">13:00 - 15:00</div>
+                            <div class="font-bold text-stone-800">Project Sync / Review</div>
+                            <div class="text-xs text-stone-500">Plan next week. Call team members.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-emerald-500">
+                            <div class="protocol-time">16:00 - 18:00</div>
+                            <div class="font-bold text-stone-800">Skill Acquisition</div>
+                            <div class="text-xs text-stone-500">Watch Course Videos (Next.js/AI).</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-purple-500">
+                            <div class="protocol-time">20:00 - 22:00</div>
+                            <div class="font-bold text-stone-800">Social / Network</div>
+                            <div class="text-xs text-stone-500">Discord communities, Twitter updates.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Holiday -->
+                <div class="bg-stone-900 rounded-xl shadow-lg border border-stone-800 overflow-hidden text-stone-200">
+                    <div class="bg-stone-800 p-4 border-b border-stone-700">
+                        <h3 class="font-bold text-red-500 flex items-center gap-2">🔥 Holiday (War Mode)</h3>
+                        <p class="text-xs text-stone-400">Restricted. High Intensity.</p>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="protocol-card border-l-4 border-red-600 bg-stone-800 text-stone-100">
+                            <div class="protocol-time text-red-400">06:00 - 10:00</div>
+                            <div class="font-bold">Sprint 1: The Hardest Task</div>
+                            <div class="text-xs text-stone-400">Eat the frog. Core architecture logic.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-red-600 bg-stone-800 text-stone-100">
+                            <div class="protocol-time text-red-400">12:00 - 16:00</div>
+                            <div class="font-bold">Sprint 2: Implementation</div>
+                            <div class="text-xs text-stone-400">Frontend, UI, or Integration work.</div>
+                        </div>
+                        <div class="protocol-card border-l-4 border-red-600 bg-stone-800 text-stone-100">
+                            <div class="protocol-time text-red-400">18:00 - 22:00</div>
+                            <div class="font-bold">Sprint 3: Debug & Deploy</div>
+                            <div class="text-xs text-stone-400">Fixing bugs, writing tests, deployment.</div>
+                        </div>
+                        <div class="p-2 bg-red-900/20 border border-red-900/50 rounded text-center text-xs text-red-400 font-mono mt-4">
+                            ⚠ NO SOCIAL MEDIA | NO GAPS
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: PROJECTS LAB -->
+        <div id="view-projects" class="hidden space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">🏗️ Project Lab (Skunkworks)</h2>
+                <p class="text-stone-500">The incubator for the Big Three and applied engineering experiments.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Project 1: Shaurya V1 -->
+                <div class="bg-white rounded-xl shadow-lg border-t-4 border-blue-600 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-stone-800">Shaurya V1</h3>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-bold">VOICE AI</span>
+                        </div>
+                        <p class="text-sm text-stone-600 mb-4">A hyper-intelligent voice command assistant tailored for productivity. The bridge between JARVIS and Alexa.</p>
+                        <div class="space-y-2">
+                            <div class="text-xs font-mono text-stone-500 border-b border-stone-100 pb-1">STACK: Python, PyTorch, SpeechRecog</div>
+                            <div class="text-xs font-mono text-stone-500">STATUS: <span class="text-amber-600">PROTOTYPE</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 2: Human Being (Cogniverse) -->
+                <div class="bg-white rounded-xl shadow-lg border-t-4 border-purple-600 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-stone-800">Human Being (Cogniverse)</h3>
+                            <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded font-bold">PLATFORM</span>
+                        </div>
+                        <p class="text-sm text-stone-600 mb-4">The core business MVP. A platform connecting AI tools with human workflows. The primary revenue driver.</p>
+                        <div class="space-y-2">
+                            <div class="text-xs font-mono text-stone-500 border-b border-stone-100 pb-1">STACK: Next.js, Firebase, Stripe</div>
+                            <div class="text-xs font-mono text-stone-500">STATUS: <span class="text-stone-400">PLANNING</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 3: Sambhala -->
+                <div class="bg-white rounded-xl shadow-lg border-t-4 border-emerald-600 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-stone-800">Sambhala</h3>
+                            <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded font-bold">STEALTH</span>
+                        </div>
+                        <p class="text-sm text-stone-600 mb-4">High-concept architectural system. The secret weapon for the SIH 2026 Grand Finale.</p>
+                        <div class="space-y-2">
+                            <div class="text-xs font-mono text-stone-500 border-b border-stone-100 pb-1">STACK: Microservices, Java, AWS</div>
+                            <div class="text-xs font-mono text-stone-500">STATUS: <span class="text-stone-400">CONCEPT</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Hands-On Projects -->
+            <div class="bg-stone-50 rounded-xl p-6 border border-stone-200">
+                <h3 class="font-bold text-stone-700 mb-4">🛠️ Other Applied Engineering (Hands-On)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-3 rounded border border-stone-200 text-sm">
+                        <span class="block font-bold text-stone-800">E-Com Microservices</span>
+                        <span class="text-xs text-stone-500">Spring Boot / Kafka</span>
+                    </div>
+                    <div class="bg-white p-3 rounded border border-stone-200 text-sm">
+                        <span class="block font-bold text-stone-800">SaaS Dashboard</span>
+                        <span class="text-xs text-stone-500">Next.js / Charts</span>
+                    </div>
+                    <div class="bg-white p-3 rounded border border-stone-200 text-sm">
+                        <span class="block font-bold text-stone-800">AI Analytics Tool</span>
+                        <span class="text-xs text-stone-500">Streamlit / Pandas</span>
+                    </div>
+                    <div class="bg-white p-3 rounded border border-stone-200 text-sm">
+                        <span class="block font-bold text-stone-800">Portfolio Site V2</span>
+                        <span class="text-xs text-stone-500">React / Framer</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: COURSE INTEL -->
+        <div id="view-courses" class="hidden space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">📚 Course Intelligence</h2>
+                <p class="text-stone-500">The complete 365-day curriculum. From foundational syntax to architectural mastery.</p>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-stone-900 text-stone-200 uppercase font-mono text-xs">
+                            <tr>
+                                <th class="px-6 py-4">Domain</th>
+                                <th class="px-6 py-4">Course Name</th>
+                                <th class="px-6 py-4">Platform</th>
+                                <th class="px-6 py-4">Target Quarter</th>
+                                <th class="px-6 py-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100">
+                            <!-- Java & Core -->
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-stone-700">Core CS</td>
+                                <td class="px-6 py-4">Algorithms, Part I & II</td>
+                                <td class="px-6 py-4 text-stone-500">Coursera (Princeton)</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q1</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">TODO</span></td>
+                            </tr>
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-stone-700">Backend</td>
+                                <td class="px-6 py-4">Java Enterprise (Spring Boot, Hibernate, Maven)</td>
+                                <td class="px-6 py-4 text-stone-500">Udemy / Official Docs</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q1</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">TODO</span></td>
+                            </tr>
+                            
+                            <!-- Web & NextJS -->
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-amber-700">Web Dev</td>
+                                <td class="px-6 py-4">Next.js & Modern React (Full Stack)</td>
+                                <td class="px-6 py-4 text-stone-500">Youtube / Documentation</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q2</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">TODO</span></td>
+                            </tr>
+
+                            <!-- Cloud -->
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-blue-700">Cloud</td>
+                                <td class="px-6 py-4">AWS Cloud Practitioner Essentials</td>
+                                <td class="px-6 py-4 text-stone-500">AWS Skill Builder</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q1</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">TODO</span></td>
+                            </tr>
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-blue-700">Cloud</td>
+                                <td class="px-6 py-4">Google Cloud Engineer Learning Path</td>
+                                <td class="px-6 py-4 text-stone-500">Google Cloud Skills</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q2</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">LOCKED</span></td>
+                            </tr>
+
+                            <!-- AI & Data -->
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-emerald-700">Data Science</td>
+                                <td class="px-6 py-4">Python for Data Science (Pandas, NumPy)</td>
+                                <td class="px-6 py-4 text-stone-500">Datacamp / Kaggle</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q2</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">LOCKED</span></td>
+                            </tr>
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-emerald-700">Data Science</td>
+                                <td class="px-6 py-4">R Programming for Statistics</td>
+                                <td class="px-6 py-4 text-stone-500">Coursera (Johns Hopkins)</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q3</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">LOCKED</span></td>
+                            </tr>
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-emerald-700">AI / ML</td>
+                                <td class="px-6 py-4">Deep Learning Specialization</td>
+                                <td class="px-6 py-4 text-stone-500">Coursera (Andrew Ng)</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q3</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">LOCKED</span></td>
+                            </tr>
+
+                            <!-- Business -->
+                            <tr class="hover:bg-stone-50">
+                                <td class="px-6 py-4 font-bold text-purple-700">Business</td>
+                                <td class="px-6 py-4">Startup School Curriculum</td>
+                                <td class="px-6 py-4 text-stone-500">Y Combinator</td>
+                                <td class="px-6 py-4 font-mono text-amber-600">Q1-Q4</td>
+                                <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded bg-stone-200 text-stone-600 text-xs font-bold">ONGOING</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 5: TEAM SQUADRON -->
+        <div id="view-team" class="hidden space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">👥 The Squadron</h2>
+                <p class="text-stone-500">A balanced 4-person special forces unit. Recruiting begins now. Hackathon deployment in Month 7.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Member 1: YOU -->
+                <div class="bg-stone-900 text-stone-50 p-6 rounded-xl border border-stone-800 shadow-lg relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">🏛️</div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">A</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-amber-500">Aditya (You)</h3>
+                            <p class="text-stone-400 text-xs font-mono uppercase tracking-widest">THE ARCHITECT</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4 text-sm">
+                        <div>
+                            <p class="text-stone-500 font-bold mb-1">PRIMARY RESPONSIBILITY</p>
+                            <p class="leading-relaxed">Core Logic, Cloud Infrastructure (AWS/GCP), Backend API, and System Integration.</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-500 font-bold mb-1">REQUIRED XP</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-stone-800 px-2 py-1 rounded text-xs border border-stone-700">Java</span>
+                                <span class="bg-stone-800 px-2 py-1 rounded text-xs border border-stone-700">Spring Boot</span>
+                                <span class="bg-stone-800 px-2 py-1 rounded text-xs border border-stone-700">AWS</span>
+                                <span class="bg-stone-800 px-2 py-1 rounded text-xs border border-stone-700">System Design</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Member 2: The Pixel -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden group hover:border-amber-400 transition-colors">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 text-6xl text-stone-900">🎨</div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center text-2xl font-bold border border-stone-200">?</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-stone-800">Recruit Pending</h3>
+                            <p class="text-stone-400 text-xs font-mono uppercase tracking-widest">THE PIXEL</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4 text-sm text-stone-600">
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">PRIMARY RESPONSIBILITY</p>
+                            <p class="leading-relaxed">Frontend Wizardry. Makes the app look "expensive" and usable. Animations, UI/UX flows.</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">REQUIRED XP</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">React / Flutter</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Tailwind CSS</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Figma</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Member 3: The Data -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden group hover:border-emerald-400 transition-colors">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 text-6xl text-stone-900">🧠</div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center text-2xl font-bold border border-stone-200">?</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-stone-800">Recruit Pending</h3>
+                            <p class="text-stone-400 text-xs font-mono uppercase tracking-widest">THE BRAIN</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4 text-sm text-stone-600">
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">PRIMARY RESPONSIBILITY</p>
+                            <p class="leading-relaxed">Handling the AI models, Python scripts, Data cleaning, and RAG pipelines.</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">REQUIRED XP</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Python</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">PyTorch/Tensorflow</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Pandas</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Member 4: The Hustler -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden group hover:border-purple-400 transition-colors">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 text-6xl text-stone-900">🚀</div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center text-2xl font-bold border border-stone-200">?</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-stone-800">Recruit Pending</h3>
+                            <p class="text-stone-400 text-xs font-mono uppercase tracking-widest">THE HUSTLER</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4 text-sm text-stone-600">
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">PRIMARY RESPONSIBILITY</p>
+                            <p class="leading-relaxed">The Pitch Deck, Presentation, Video Editing for submission, and Market Research.</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-400 font-bold mb-1 text-xs">REQUIRED XP</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Public Speaking</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Canva/PPT</span>
+                                <span class="bg-stone-50 px-2 py-1 rounded text-xs border border-stone-200">Video Editing</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 6: DIGITAL IDENTITY -->
+        <div id="view-identity" class="hidden space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">🆔 Digital Identity</h2>
+                <p class="text-stone-500">Maintenance protocols for your developer presence. Visible work creates opportunities.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- LinkedIn -->
+                <div class="bg-white p-6 rounded-xl border-l-4 border-blue-700 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">LinkedIn</h3>
+                        <span class="text-xs text-stone-400 font-mono">WEEKLY CHECK</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-blue-700"> Update "Featured" with latest Project Snippet.
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-blue-700"> Connect with 5 Engineers in Cloud/AI.
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-blue-700"> Post 1 "Build in Public" update.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Google Developer -->
+                <div class="bg-white p-6 rounded-xl border-l-4 border-red-500 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">Google Developer</h3>
+                        <span class="text-xs text-stone-400 font-mono">MONTHLY CHECK</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-red-500"> Update Google Cloud Skills Boost Badge.
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-red-500"> Check Solution Challenge Deadlines.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Amazon Developer -->
+                <div class="bg-white p-6 rounded-xl border-l-4 border-amber-500 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">Amazon Developer</h3>
+                        <span class="text-xs text-stone-400 font-mono">MONTHLY CHECK</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-amber-500"> Sync AWS Certification Badges (Credly).
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-amber-500"> Review AWS Community Builder Application.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Nvidia Developer -->
+                <div class="bg-white p-6 rounded-xl border-l-4 border-green-600 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">Nvidia Developer</h3>
+                        <span class="text-xs text-stone-400 font-mono">QUARTERLY CHECK</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-stone-600">
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-green-600"> Complete DLI Workshop & Claim Cert.
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <input type="checkbox" class="accent-green-600"> Check Inception Program Eligibility (Startup).
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FLOATING AI TERMINAL BUTTON -->
+    <button onclick="toggleTerminal()" class="fixed bottom-6 right-6 bg-stone-900 text-emerald-400 p-4 rounded-full shadow-2xl hover:scale-105 transition-transform z-50 border-2 border-stone-700 group">
+        <span class="text-2xl group-hover:hidden">🤖</span>
+        <span class="text-2xl hidden group-hover:block">✨</span>
+    </button>
+
+    <!-- AI TERMINAL MODAL -->
+    <div id="ai-terminal" class="fixed bottom-24 right-6 w-96 h-[500px] terminal-window rounded-lg hidden flex-col z-50">
+        <!-- Terminal Header -->
+        <div class="bg-stone-800 p-3 border-b border-stone-700 flex justify-between items-center rounded-t-lg">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2 text-xs text-stone-400">MISSION ADVISOR // ONLINE</span>
+            </div>
+            <button onclick="toggleTerminal()" class="text-stone-500 hover:text-stone-300">×</button>
+        </div>
+
+        <!-- Terminal Output -->
+        <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4 text-sm scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-stone-900">
+            <div class="text-stone-400 italic">
+                > System initialized.<br>
+                > Connected to Gemini Uplink.<br>
+                > Ready for queries, Aditya.
+            </div>
+        </div>
+
+        <!-- Terminal Input -->
+        <div class="p-3 bg-stone-900 border-t border-stone-700 rounded-b-lg">
+            <div class="flex gap-2">
+                <span class="text-emerald-500 font-bold">></span>
+                <input type="text" id="user-input" 
+                    class="w-full bg-transparent text-stone-200 terminal-input text-sm placeholder-stone-600"
+                    placeholder="Enter command or query..."
+                    onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" class="text-emerald-500 hover:text-emerald-300">↵</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-stone-900 text-stone-400 py-8 text-center text-sm">
+        <p class="mono">Generated by Canvas Create | Focus. Build. Ship.</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- API CONFIGURATION ---
+        const apiKey = ""; // The execution environment provides the key at runtime.
+        const modelId = "gemini-2.5-flash-preview-09-2025";
+        
+        // --- DATA STORE ---
+        let currentQuarterId = 1;
+        const protocolData = {
+            quarters: {
+                1: {
+                    title: "Q1: Foundation & Team Assembly",
+                    theme: "The Setup",
+                    dates: "Dec '25 - Feb '26",
+                    badges: ["Java Core", "Team Locked", "Idea Validated"],
+                    objectives: [
+                        "Master Java Advanced (Multithreading/Streams) + DSA.",
+                        "Certification: AWS Cloud Practitioner (CLF-C02).",
+                        "Recruitment: Find 3 Co-founders (Pixel, Data, Hustler).",
+                        "Business: Market Research & Problem Validation."
+                    ],
+                    business: "KPI: Conduct 50 User Interviews. Define the exact 'Hair on Fire' problem for CogniVerse. NO CODING PRODUCT YET.",
+                    months: [
+                        {
+                            name: "December 2025",
+                            tasks: [
+                                "Week 1: Coursera Algorithms Pt 1 (Princeton). Java Refresh.",
+                                "Week 2: BUSINESS: Create 'Target User Persona' & Questionnaire.",
+                                "Week 3-4: RECRUITMENT: Attend meetups/Discord to find teammates."
+                            ]
+                        },
+                        {
+                            name: "January 2026",
+                            tasks: [
+                                "Week 1-2: Course: AWS Cloud Practitioner Essentials.",
+                                "Week 3-4: BUSINESS: Analyze interview data. Draft Whitepaper."
+                            ]
+                        },
+                        {
+                            name: "February 2026",
+                            tasks: [
+                                "Week 1-2: Exam: Pass AWS Cloud Practitioner.",
+                                "Week 3-4: TEAM: First internal 'Prototype Sprint' (Non-Public)."
+                            ]
+                        }
+                    ]
+                },
+                2: {
+                    title: "Q2: The Build & Business Launch",
+                    theme: "Zero to One",
+                    dates: "Mar '26 - May '26",
+                    badges: ["MVP Live", "First Customers", "Google ACE"],
+                    objectives: [
+                        "Mastery: Full Stack (React/Flutter) + Firebase.",
+                        "Certification: Google Associate Cloud Engineer (ACE).",
+                        "Launch: CogniVerse V1 (Functional MVP).",
+                        "Business: Acquire first 100 Active Users."
+                    ],
+                    business: "KPI: 'The Launch'. Deploy to production. Get real users. Fix bugs based on feedback. Register the legal entity if viable.",
+                    months: [
+                        {
+                            name: "March 2026",
+                            tasks: [
+                                "Week 1: Course: Google Cloud Engineer Learning Path.",
+                                "Week 2-4: BUILD: Core Development Sprint (Frontend + Backend)."
+                            ]
+                        },
+                        {
+                            name: "April 2026",
+                            tasks: [
+                                "Week 1-3: BUILD: Integrate Payments & Auth. Beta Testing.",
+                                "Week 4: BUSINESS: Soft Launch to Friends/Family."
+                            ]
+                        },
+                        {
+                            name: "May 2026",
+                            tasks: [
+                                "Week 1-2: Exam: Pass Google Associate Cloud Engineer.",
+                                "Week 3-4: BUSINESS: Public Launch on ProductHunt/Reddit."
+                            ]
+                        }
+                    ]
+                },
+                3: {
+                    title: "Q3: The Arena & AI Integration",
+                    theme: "Battle Testing",
+                    dates: "Jun '26 - Aug '26",
+                    badges: ["First Hackathon", "AI Integration", "Nvidia DLI"],
+                    objectives: [
+                        "Mastery: Python Deep Dive, PyTorch, CV.",
+                        "Certification: Nvidia DLI Fundamentals of Deep Learning.",
+                        "Competition: Participate in 2 Online Hackathons.",
+                        "Project: Integrate AI (Voice/Vision) into CogniVerse."
+                    ],
+                    business: "KPI: Use Hackathons to get feedback from judges/mentors. Pivot product if needed based on AI capabilities.",
+                    months: [
+                        {
+                            name: "June 2026",
+                            tasks: [
+                                "Week 1-4: Course: Deep Learning Specialization. Integrate AI into App."
+                            ]
+                        },
+                        {
+                            name: "July 2026",
+                            tasks: [
+                                "Week 1-2: Course: Nvidia DLI Workshop (Get Certificate).",
+                                "Week 3-4: HACKATHON: Sign up for 'Hacks for Hackers' (or similar)."
+                            ]
+                        },
+                        {
+                            name: "August 2026",
+                            tasks: [
+                                "Week 1-4: BUSINESS: Pitch Deck refinement. Prepare for SIH."
+                            ]
+                        }
+                    ]
+                },
+                4: {
+                    title: "Q4: Scale & Major Leagues",
+                    theme: "Domination",
+                    dates: "Sep '26 - Nov '26",
+                    badges: ["SIH Finale", "AWS SAA", "Pitch Ready"],
+                    objectives: [
+                        "Mastery: System Design, Microservices.",
+                        "Certification: AWS Solutions Architect Associate.",
+                        "Hackathon: Smart India Hackathon (SIH) 2026.",
+                        "Business: Apply for Grants/Incubators."
+                    ],
+                    business: "KPI: Win SIH. Have a polished pitch deck ready for investors. User base > 1000.",
+                    months: [
+                        {
+                            name: "September 2026",
+                            tasks: [
+                                "Week 1-3: HACKATHON: SIH Internal College Hackathons.",
+                                "Week 4: Course: Ultimate AWS Certified Solutions Architect."
+                            ]
+                        },
+                        {
+                            name: "October 2026",
+                            tasks: [
+                                "Week 1-3: BUILD: Scale Infrastructure (Load Balancers/Caching).",
+                                "Week 4: Exam: Pass AWS Solutions Architect Associate."
+                            ]
+                        },
+                        {
+                            name: "November 2026",
+                            tasks: [
+                                "Week 1-2: BUSINESS: Apply for Microsoft Imagine Cup.",
+                                "Week 3-4: Final Push. Year Review."
+                            ]
+                        }
+                    ]
+                }
+            }
+        };
+
+        // --- VIEW SWITCHING LOGIC ---
+        function switchMainView(viewId) {
+            // Hide all views
+            ['dashboard', 'courses', 'team', 'daily', 'projects', 'identity'].forEach(id => {
+                const el = document.getElementById(`view-${id}`);
+                if(el) el.classList.add('hidden');
+                
+                // Update Button Styles
+                const btn = document.getElementById(`nav-${id}`);
+                if(btn) {
+                    if (viewId === id) {
+                        btn.classList.remove('nav-deck-inactive');
+                        btn.classList.add('nav-deck-active');
+                    } else {
+                        btn.classList.remove('nav-deck-active');
+                        btn.classList.add('nav-deck-inactive');
+                    }
+                }
+            });
+
+            // Show selected view
+            const selectedEl = document.getElementById(`view-${viewId}`);
+            if(selectedEl) selectedEl.classList.remove('hidden');
+        }
+
+        // --- GEMINI API LOGIC ---
+
+        async function callGemini(userPrompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+            
+            // Context injection
+            const context = `You are the Mission Advisor AI for Aditya's 1-year Monk Mode Protocol. 
+            Current Phase: ${protocolData.quarters[currentQuarterId].title}.
+            Theme: ${protocolData.quarters[currentQuarterId].theme}.
+            Objectives: ${protocolData.quarters[currentQuarterId].objectives.join(", ")}.
+            
+            Style: Concise, military-tech aesthetic, encouraging but disciplined. Use markdown for formatting.
+            Task: Answer the user's query relevant to this study plan, coding concepts, or hackathon strategy.`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: context + "\n\nUser Query: " + userPrompt }]
+                }]
+            };
+
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].text;
+                } catch (error) {
+                    if (i === 4) return "⚠️ Uplink failed. Connection timeout. Try again later.";
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        // --- TERMINAL UI LOGIC ---
+
+        function toggleTerminal() {
+            const term = document.getElementById('ai-terminal');
+            if (term.classList.contains('hidden')) {
+                term.classList.remove('hidden');
+                term.classList.add('flex');
+                document.getElementById('user-input').focus();
+            } else {
+                term.classList.add('hidden');
+                term.classList.remove('flex');
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add User Message
+            appendMessage('User', message);
+            input.value = '';
+
+            // Add Loading Indicator
+            const loadingId = appendLoading();
+
+            // Call Gemini
+            const reply = await callGemini(message);
+            
+            // Remove Loading & Add AI Response
+            removeLoading(loadingId);
+            appendMessage('Advisor', reply);
+        }
+
+        function appendMessage(sender, text) {
+            const history = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            
+            if (sender === 'User') {
+                div.className = "text-stone-300";
+                div.innerHTML = `<span class="text-amber-500 font-bold">> User:</span> ${text}`;
+            } else {
+                div.className = "prose prose-invert prose-sm max-w-none text-emerald-400";
+                div.innerHTML = `<span class="font-bold">> Advisor:</span><br>${marked.parse(text)}`;
+            }
+            
+            history.appendChild(div);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        function appendLoading() {
+            const history = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            const id = 'loading-' + Date.now();
+            div.id = id;
+            div.className = "text-emerald-500 flex items-center gap-1";
+            div.innerHTML = `> Processing <span class="typing-dot">.</span><span class="typing-dot">.</span><span class="typing-dot">.</span>`;
+            history.appendChild(div);
+            history.scrollTop = history.scrollHeight;
+            return id;
+        }
+
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // --- SPECIAL AI ACTIONS ---
+
+        function requestIntel() {
+            const q = protocolData.quarters[currentQuarterId];
+            const prompt = `Give me a strategic breakdown for ${q.title}. The theme is "${q.theme}". What are the critical pitfalls to avoid and the highest leverage actions I should take this quarter to succeed in the objectives: ${q.objectives.join(", ")}?`;
+            
+            toggleTerminal();
+            const input = document.getElementById('user-input');
+            input.value = prompt;
+            sendMessage();
+        }
+
+        function analyzeRadar() {
+            // Hardcoded labels from the chart config to keep context clear
+            const prompt = `I am looking at my Skill Radar Chart. 
+            My Q1 Start Levels are: Coding/DSA (80), Cloud (20), AI/ML (10), Business (10).
+            My Q4 Goals are: Coding/DSA (90), Cloud (85), AI/ML (80), Business (70).
+            
+            Identify the largest gap I need to close immediately and give me 3 ultra-specific, actionable steps I can take this week to start bridging that gap.`;
+            
+            toggleTerminal();
+            const input = document.getElementById('user-input');
+            input.value = prompt;
+            sendMessage();
+        }
+
+        function optimizeRoutine() {
+            const q = protocolData.quarters[currentQuarterId];
+            const prompt = `Analyze my daily routine. 
+            I have two deep work blocks: 
+            1. Morning (05:30 - 07:30) - "Hard Core"
+            2. Evening (19:00 - 21:00) - "Build Phase"
+            
+            My current focus is ${q.title} with the theme "${q.theme}".
+            
+            Tell me exactly what specific topic I should study in the morning block and what specific feature/code I should write in the evening block to maximize progress for this quarter.`;
+            
+            toggleTerminal();
+            const input = document.getElementById('user-input');
+            input.value = prompt;
+            sendMessage();
+        }
+
+        // --- CHART INITIALIZATION ---
+        
+        // 1. Evolution Chart (Radar)
+        function initEvolutionChart() {
+            const ctx = document.getElementById('evolutionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Coding/DSA', 'Cloud Infra', 'AI/ML', 'Business/Product'],
+                    datasets: [
+                        {
+                            label: 'Q1 Start',
+                            data: [80, 20, 10, 10],
+                            fill: true,
+                            backgroundColor: 'rgba(217, 119, 6, 0.2)', // Amber
+                            borderColor: 'rgba(217, 119, 6, 1)',
+                            pointBackgroundColor: 'rgba(217, 119, 6, 1)',
+                        },
+                        {
+                            label: 'Q4 Goal',
+                            data: [90, 85, 80, 70], // A balanced Architect
+                            fill: true,
+                            backgroundColor: 'rgba(28, 25, 23, 0.1)', // Stone
+                            borderColor: 'rgba(28, 25, 23, 0.8)',
+                            pointBackgroundColor: 'rgba(28, 25, 23, 1)',
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: { line: { borderWidth: 3 } },
+                    scales: {
+                        r: {
+                            angleLines: { display: true },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: { display: false } // Hide numbers for cleaner look
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Daily Routine Chart (Floating Bar / Gantt)
+        function initRoutineChart() {
+            const ctx = document.getElementById('routineChart').getContext('2d');
+            
+            // Mapping times to decimals (05:30 -> 5.5)
+            const routineData = [
+                { activity: "Deep Work 1 (Hard Core)", start: 5.5, end: 7.5, color: '#d97706' }, // Amber-600
+                { activity: "Gym/Run", start: 7.5, end: 8.5, color: '#10b981' }, // Emerald-500
+                { activity: "College/Buffer", start: 9, end: 17, color: '#a8a29e' }, // Stone-400
+                { activity: "Deep Work 2 (Build)", start: 19, end: 21, color: '#d97706' }, // Amber-600
+                { activity: "Business Hour", start: 21.5, end: 22.5, color: '#3b82f6' } // Blue-500
+            ];
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: routineData.map(d => d.activity),
+                    datasets: [{
+                        label: 'Schedule',
+                        data: routineData.map(d => [d.start, d.end]),
+                        backgroundColor: routineData.map(d => d.color),
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bars
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            min: 5,
+                            max: 23,
+                            title: { display: true, text: 'Time of Day (24h)' },
+                            grid: { color: '#e7e5e4' }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const raw = context.raw;
+                                    const start = formatTime(raw[0]);
+                                    const end = formatTime(raw[1]);
+                                    return `${start} - ${end}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper to format decimal time (5.5 -> 05:30)
+        function formatTime(decimal) {
+            const hrs = Math.floor(decimal);
+            const mins = Math.round((decimal - hrs) * 60);
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        // --- DOM MANIPULATION ---
+
+        function switchQuarter(qId) {
+            currentQuarterId = qId; // Update global state for AI context
+            
+            // 1. Update Tabs
+            [1, 2, 3, 4].forEach(id => {
+                const btn = document.getElementById(`tab-q${id}`);
+                if (id === qId) {
+                    btn.className = "active-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base cursor-default";
+                } else {
+                    btn.className = "inactive-tab py-4 px-6 rounded-t-lg font-bold transition-all duration-200 shadow-sm text-sm md:text-base cursor-pointer";
+                }
+            });
+
+            // 2. Update Content
+            const data = protocolData.quarters[qId];
+            
+            // Title & Theme
+            document.getElementById('q-title').innerText = data.title;
+            document.getElementById('q-theme').innerText = `THEME: "${data.theme}"`;
+            
+            // Badges
+            const badgeContainer = document.getElementById('q-badges');
+            badgeContainer.innerHTML = '';
+            data.badges.forEach(badge => {
+                const span = document.createElement('span');
+                span.className = "bg-stone-200 text-stone-700 text-xs px-2 py-1 rounded font-mono font-bold";
+                span.innerText = badge.toUpperCase();
+                badgeContainer.appendChild(span);
+            });
+
+            // Objectives
+            const objList = document.getElementById('q-objectives');
+            objList.innerHTML = '';
+            data.objectives.forEach(obj => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="text-amber-500 font-bold mr-2">✓</span> ${obj.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}`;
+                objList.appendChild(li);
+            });
+
+            // Business
+            document.getElementById('q-business').innerHTML = data.business;
+
+            // Timeline (Months)
+            const timeline = document.getElementById('q-timeline');
+            timeline.innerHTML = '';
+            data.months.forEach((month, index) => {
+                const card = document.createElement('div');
+                card.className = "border border-stone-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-stone-50";
+                
+                let taskHTML = `<ul class="space-y-2 mt-2">`;
+                month.tasks.forEach(task => {
+                    // Highlight keywords
+                    const styledTask = task.replace(/(EVENT:|Exam:|Project:|Course:|BUSINESS:|RECRUITMENT:|BUILD:|TEAM:|HACKATHON:)/g, '<span class="font-bold text-amber-600">$1</span>');
+                    taskHTML += `<li class="text-sm text-stone-600 pl-4 border-l-2 border-stone-300">${styledTask}</li>`;
+                });
+                taskHTML += `</ul>`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-stone-800 text-white text-xs font-bold px-2 py-1 rounded">${month.name}</span>
+                    </div>
+                    ${taskHTML}
+                `;
+                timeline.appendChild(card);
+            });
+        }
+
+        // --- TIMER LOGIC ---
+        function startCountdown() {
+            const target = new Date("December 1, 2026 00:00:00").getTime();
+            const start = new Date("December 1, 2025 00:00:00").getTime();
+            
+            setInterval(() => {
+                const now = new Date().getTime();
+                const distance = target - now;
+
+                if (distance < 0) {
+                    document.getElementById("countdown-timer").innerHTML = "MISSION COMPLETE";
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                
+                document.getElementById("countdown-timer").innerHTML = `${days}d ${hours}h`;
+
+                // Update Progress Bar based on year start
+                const totalDuration = target - start;
+                const elapsed = now - start;
+                let percentage = (elapsed / totalDuration) * 100;
+                percentage = Math.max(0, Math.min(100, percentage)); // Clamp 0-100
+                
+                document.getElementById('year-progress').style.width = `${percentage}%`;
+
+            }, 1000);
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            initEvolutionChart();
+            initRoutineChart();
+            switchQuarter(1); // Load Q1 by default
+            startCountdown();
+        };
+
+    </script>
+</body>
+</html>
